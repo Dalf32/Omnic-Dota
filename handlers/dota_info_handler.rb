@@ -26,7 +26,7 @@ class DotaInfoHandler < CommandHandler
     show_talents = name_input.first.casecmp?('talents')
     name_input = name_input[1..-1] if show_talents
 
-    name = name_input.join(' ')
+    name = jargon_parser.translate_hero(name_input.join(' '))
     return 'Unrecognized.' if name.empty?
 
     event.channel.start_typing
@@ -42,7 +42,7 @@ class DotaInfoHandler < CommandHandler
   end
 
   def show_item(event, *name_input)
-    name = name_input.join(' ')
+    name = jargon_parser.translate_item(name_input.join(' '))
     return 'Unrecognized.' if name.empty?
 
     event.channel.start_typing
@@ -55,7 +55,7 @@ class DotaInfoHandler < CommandHandler
   end
 
   def show_ability(event, *name_input)
-    name = name_input.join(' ')
+    name = jargon_parser.translate_ability(name_input.join(' '))
     return 'Unrecognized.' if name.empty?
 
     event.channel.start_typing
@@ -77,10 +77,14 @@ class DotaInfoHandler < CommandHandler
     @dota_dataset ||= create_dota_dataset(dota_service)
   end
 
+  def jargon_parser
+    @jargon_parser ||= create_jargon_parser(config.hero_abbrevs, config.item_abbrevs)
+  end
+
   def build_hero_embed(embed, hero_info)
     embed.author = { name: hero_info.name, icon_url: attribute_icon(hero_info.attribute) }
     embed.title = hero_info.short_desc
-    embed.thumbnail = { url: "https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/heroes/#{hero_info.name_id.gsub('npc_dota_hero_', '')}.png" }
+    embed.thumbnail = { url: "#{config.image_urls.hero_thumb_path}#{hero_info.name_id.gsub('npc_dota_hero_', '')}.png" }
     embed.description = "-# #{hero_info.complexity}-complexity #{hero_info.attack_type} Hero"
     add_hero_facets_fields(embed, hero_info.facets)
     add_hero_abilities_fields(embed, hero_info.abilities_ordered)
@@ -89,10 +93,10 @@ class DotaInfoHandler < CommandHandler
 
   def attribute_icon(attribute_name)
     {
-      'Strength' => 'https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/icons/hero_strength.png',
-      'Agility' => 'https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/icons/hero_agility.png',
-      'Intelligence' => 'https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/icons/hero_intelligence.png',
-      'Universal' => 'https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/icons/hero_universal.png'
+      'Strength' => config.image_urls.strength_icon,
+      'Agility' => config.image_urls.agility_icon,
+      'Intelligence' => config.image_urls.intelligence_icon,
+      'Universal' => config.image_urls.universal_icon
     }[attribute_name]
   end
 
@@ -162,7 +166,7 @@ class DotaInfoHandler < CommandHandler
   def build_item_embed(embed, item_info)
     embed.author = { name: item_info.name }
     embed.title = item_info.neutral? ? "Tier #{item_info.neutral_tier} Neutral Item" : "#{item_info.gold_cost} Gold Cost Item"
-    embed.thumbnail = { url: "https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/items/#{item_info.name_id.gsub('item_', '')}.png" }
+    embed.thumbnail = { url: "#{config.image_urls.item_thumb_path}#{item_info.name_id.gsub('item_', '')}.png" }
     embed.description = item_info.short_desc
     add_common_ability_fields(embed, item_info) if item_info.ability?
     add_bonus_values_field(embed, item_info.bonus_values)
@@ -208,7 +212,7 @@ class DotaInfoHandler < CommandHandler
 
   def build_ability_embed(embed, ability_info)
     embed.author = { name: ability_info.name }
-    embed.thumbnail = { url: "https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/abilities/#{ability_info.name_id}.png" }
+    embed.thumbnail = { url: "#{config.image_urls.ability_thumb_path}#{ability_info.name_id}.png" }
     embed.description = ability_info.short_desc
     add_common_ability_fields(embed, ability_info)
     add_aghs_upgrade_fields(embed, ability_info)
