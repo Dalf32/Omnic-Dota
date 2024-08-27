@@ -29,6 +29,7 @@ class DotaInfoHandler < CommandHandler
     name = name_input.join(' ')
     return 'Unrecognized.' if name.empty?
 
+    event.channel.start_typing
     entity_id = dota_dataset.hero_id_by_name(name)
     return 'Unrecognized.' if entity_id.nil?
 
@@ -44,6 +45,7 @@ class DotaInfoHandler < CommandHandler
     name = name_input.join(' ')
     return 'Unrecognized.' if name.empty?
 
+    event.channel.start_typing
     entity_id = dota_dataset.item_id_by_name(name)
     return 'Unrecognized.' if entity_id.nil?
 
@@ -56,6 +58,7 @@ class DotaInfoHandler < CommandHandler
     name = name_input.join(' ')
     return 'Unrecognized.' if name.empty?
 
+    event.channel.start_typing
     entity_id = dota_dataset.ability_id_by_name(name)
     return 'Unrecognized.' if entity_id.nil?
 
@@ -158,11 +161,62 @@ class DotaInfoHandler < CommandHandler
 
   def build_item_embed(embed, item_info)
     embed.author = { name: item_info.name }
+    embed.title = item_info.neutral? ? "Tier #{item_info.neutral_tier} Neutral Item" : "#{item_info.gold_cost} Gold Cost Item"
+    embed.thumbnail = { url: "https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/items/#{item_info.name_id.gsub('item_', '')}.png" }
+    embed.description = item_info.short_desc
+    add_common_ability_fields(embed, item_info) if item_info.ability?
+    add_bonus_values_field(embed, item_info.bonus_values)
     embed
+  end
+
+  def add_bonus_values_field(embed, bonus_values)
+    return if bonus_values.empty?
+
+    embed.add_field(name: 'Bonuses', value: bonus_values.map { |val| "+#{val.values.first} #{val.heading}" }.join("\n"))
+  end
+
+  def add_common_ability_fields(embed, ability_info)
+    add_ability_properties_field(embed, ability_info)
+    add_ability_details_field(embed, ability_info)
+    add_ability_cost_field(embed, ability_info)
+  end
+
+  def add_ability_properties_field(embed, ability_info)
+    properties_detail = "Ability: #{ability_info.target_type}"
+    properties_detail += "\nAffects: #{ability_info.target_team} #{ability_info.target_affects}" unless ability_info.no_target?
+    properties_detail += "\nDamage Type: #{ability_info.damage_type}" unless ability_info.no_damage?
+    properties_detail += "\nPierces Spell Immunity: #{ability_info.pierces_spell_immunity? ? 'Yes' : 'No'}" if ability_info.anything_to_pierce?
+    properties_detail += "\nDispellable: #{ability_info.dispellable}" if ability_info.anything_to_dispel?
+
+    embed.add_field(name: 'Properties', value: properties_detail)
+  end
+
+  def add_ability_details_field(embed, ability_info)
+    details = ability_info.ability_values.map { |val| "#{val.heading} #{val.values_str}" }.join("\n")
+    details += "\n\nCooldown: #{ability_info.cooldowns.join('/')}" if ability_info.cooldowns?
+
+    embed.add_field(name: 'Details', value: details, inline: true)
+  end
+
+  def add_ability_cost_field(embed, ability_info)
+    cost = ''
+    cost += "Mana: #{ability_info.mana_costs.join('/')}\n" if ability_info.mana_costs?
+    cost += "Health: #{ability_info.health_costs.join('/')}" if ability_info.health_costs?
+
+    embed.add_field(name: 'Cost', value: cost, inline: true) unless cost.empty?
   end
 
   def build_ability_embed(embed, ability_info)
     embed.author = { name: ability_info.name }
+    embed.thumbnail = { url: "https://cdn.akamai.steamstatic.com/apps/dota2/images/dota_react/abilities/#{ability_info.name_id}.png" }
+    embed.description = ability_info.short_desc
+    add_common_ability_fields(embed, ability_info)
+    add_aghs_upgrade_fields(embed, ability_info)
     embed
+  end
+
+  def add_aghs_upgrade_fields(embed, ability_info)
+    embed.add_field(name: 'Scepter Upgrade', value: ability_info.scepter_desc) if ability_info.scepter_upgrade?
+    embed.add_field(name: 'Shard Upgrade', value: ability_info.shard_desc) if ability_info.shard_upgrade?
   end
 end
