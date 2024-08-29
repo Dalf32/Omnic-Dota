@@ -18,6 +18,8 @@ class DotaInfoHandler < CommandHandler
     .feature(:dota_info).min_args(1).usage('dotaability <ability>')
     .description('Shows details of the given DotA Ability')
 
+  cache_object :dota_dataset, :build_dota_dataset
+
   def config_name
     :dota
   end
@@ -69,12 +71,16 @@ class DotaInfoHandler < CommandHandler
 
   private
 
-  def dota_service
-    @dota_service ||= create_dota_service(config.base_url, **config.service_urls)
+  def build_dota_dataset
+    create_dota_dataset(create_dota_service(config.base_url, **config.service_urls))
   end
 
   def dota_dataset
-    @dota_dataset ||= create_dota_dataset(dota_service)
+    if config.has_key?(:cache_time)
+      cached_object(:dota_dataset, config.cache_time)
+    else
+      cached_object(:dota_dataset)
+    end
   end
 
   def jargon_parser
