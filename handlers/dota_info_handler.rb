@@ -202,6 +202,8 @@ class DotaInfoHandler < CommandHandler
   end
 
   def add_ability_details_field(embed, ability_info)
+    return if ability_info.ability_values.empty?
+
     details = ability_info.ability_values.map { |val| "#{val.heading} #{val.values_str}" }.join("\n")
     details += "\n\nCooldown: #{ability_info.cooldowns.join('/')}" if ability_info.cooldowns?
 
