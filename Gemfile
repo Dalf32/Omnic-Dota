@@ -1,1 +1,1 @@
-gem 'violet_archives', '~> 0.2.0'
+gem 'violet_archives', '~> 0.2'
